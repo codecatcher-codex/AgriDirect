@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriDirect - Direct Farm-to-Buyer Platform & Mandi Tracker</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Fonts (Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            emerald: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              300: '#6ee7b7',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Announcement / Offline Status Banner -->
+  <div id="offline-banner" class="hidden bg-amber-500 text-white text-xs sm:text-sm font-medium py-2 px-4 text-center flex items-center justify-center gap-2 transition-all">
+    <i data-lucide="wifi-off" class="w-4 h-4"></i>
+    <span>You are currently offline (Low-bandwidth Mode). Actions will be queued locally and synced when online.</span>
+    <span id="queue-badge" class="bg-amber-700 text-amber-100 text-xs px-2 py-0.5 rounded-full ml-2">0 Queued</span>
+  </div>
+
+  <!-- Main Navigation Header -->
+  <header class="bg-emerald-800 text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo / Brand -->
+        <div class="flex items-center gap-3 cursor-pointer" onclick="app.switchTab('farmer')">
+          <div class="bg-emerald-500 p-2 rounded-xl text-emerald-950 font-bold shadow-inner">
+            <i data-lucide="sprout" class="w-6 h-6 text-white"></i>
+          </div>
+          <div>
+            <span class="font-bold text-xl tracking-tight block leading-none text-white">AgriDirect</span>
+            <span class="text-[10px] text-emerald-200 tracking-wider uppercase font-semibold">Direct Farm Network</span>
+          </div>
+        </div>
+
+        <!-- Offline Toggle Switch & Mode Pill -->
+        <div class="flex items-center gap-3">
+          <button id="toggle-offline-btn" onclick="app.toggleOfflineMode()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-emerald-600 bg-emerald-900/40 hover:bg-emerald-700/50 transition">
+            <i id="network-icon" data-lucide="wifi" class="w-4 h-4 text-emerald-300"></i>
+            <span id="network-text" class="hidden sm:inline">Online</span>
+          </button>
+
+          <!-- Shopping Cart Pill -->
+          <button id="cart-nav-btn" onclick="app.openCartModal()" class="relative p-2 bg-emerald-700 hover:bg-emerald-600 rounded-lg transition text-white flex items-center gap-2">
+            <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+            <span class="hidden sm:inline text-xs font-semibold">Cart</span>
+            <span id="cart-count" class="bg-amber-400 text-emerald-950 text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow">0</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-emerald-900/70 border-t border-emerald-700/50">
+      <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+        <nav class="flex space-x-1 sm:space-x-4 overflow-x-auto py-2 scrollbar-thin">
+          <button onclick="app.switchTab('farmer')" id="tab-farmer" class="tab-btn px-3 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap text-emerald-100 hover:bg-emerald-800 transition">
+            <i data-lucide="tractor" class="w-4 h-4"></i>
+            <span>Farmer Portal</span>
+          </button>
+
+          <button onclick="app.switchTab('buyer')" id="tab-buyer" class="tab-btn px-3 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap text-emerald-100 hover:bg-emerald-800 transition">
+            <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+            <span>Buyer Marketplace</span>
+          </button>
+
+          <button onclick="app.switchTab('mandi')" id="tab-mandi" class="tab-btn px-3 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap text-emerald-100 hover:bg-emerald-800 transition">
+            <i data-lucide="trending-up" class="w-4 h-4"></i>
+            <span>Market Prices (Mandi)</span>
+          </button>
+
+          <button onclick="app.switchTab('sms')" id="tab-sms" class="tab-btn px-3 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap text-emerald-100 hover:bg-emerald-800 transition relative">
+            <i data-lucide="message-square" class="w-4 h-4"></i>
+            <span>SMS Simulator</span>
+            <span id="sms-unread-dot" class="w-2 h-2 bg-amber-400 rounded-full hidden"></span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- Toast Notification Banner -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 max-w-md bg-slate-900 text-white p-4 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 pointer-events-none">
+      <div id="toast-icon" class="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
+        <i data-lucide="check-circle" class="w-5 h-5"></i>
+      </div>
+      <div class="flex-1">
+        <h4 id="toast-title" class="font-semibold text-sm">Notification</h4>
+        <p id="toast-msg" class="text-xs text-slate-300">Message description...</p>
+      </div>
+    </div>
+
+    <!-- TAB 1: FARMER PORTAL -->
+    <section id="view-farmer" class="tab-view space-y-6">
+      
+      <!-- Welcome / Guidance Header -->
+      <div class="bg-emerald-900 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
+        <div class="relative z-10 max-w-2xl">
+          <span class="inline-block bg-emerald-700 text-emerald-100 text-xs font-semibold px-2.5 py-1 rounded-md mb-2">Farmer Portal</span>
+          <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Direct Crop Listing & Management</h1>
+          <p class="text-emerald-200 text-sm mt-1">List your fresh harvest directly for buyers. Check official market benchmark rates before setting your farmgate price to ensure fair earnings.</p>
+        </div>
+        <i data-lucide="leaf" class="absolute -right-6 -bottom-6 w-48 h-48 text-emerald-800/40 pointer-events-none"></i>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Listing Form -->
+        <div class="lg:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+              <i data-lucide="plus-circle" class="w-5 h-5 text-emerald-600"></i>
+              Post New Crop
+            </h2>
+            <span class="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md">Live Sync (DB)</span>
+          </div>
+
+          <form id="add-crop-form" onsubmit="app.handleCreateListing(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Crop / Commodity Name *</label>
+              <select id="crop-name" required onchange="app.handleCropSelect(this.value)" class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition bg-white">
+                <option value="">-- Select Vegetable, Fruit, or Grain --</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Category *</label>
+                <select id="crop-category" required class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition bg-white">
+                  <option value="Vegetables">Vegetables</option>
+                  <option value="Fruits">Fruits</option>
+                  <option value="Leafy Greens & Spices">Leafy Greens & Spices</option>
+                  <option value="Tubers">Tubers & Roots</option>
+                  <option value="Grains">Grains & Pulses</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Quantity (kg) *</label>
+                <input type="number" id="crop-qty" min="1" step="1" required placeholder="100" class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Your Price / kg (₹) *</label>
+                <input type="number" id="crop-price" min="1" step="0.5" required placeholder="35" class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Harvest Date *</label>
+                <input type="date" id="crop-harvest" required class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Farmer / Farm Name *</label>
+              <input type="text" id="crop-farmer" required placeholder="e.g. Ramesh Patel" class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Location / District *</label>
+              <input type="text" id="crop-location" required placeholder="e.g. Kadapa" class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Phone Number (for SMS notifications) *</label>
+              <input type="tel" id="crop-phone" required placeholder="+91 9876543210" class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition">
+            </div>
+
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl transition shadow-md flex items-center justify-center gap-2">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              Publish Crop Listing
+            </button>
+          </form>
+        </div>
+
+        <!-- Right: Current Listings Management -->
+        <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <h2 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                <i data-lucide="list" class="w-5 h-5 text-emerald-600"></i>
+                Active Farmer Listings
+              </h2>
+              <p class="text-xs text-slate-500">Listings synchronized with PostgreSQL Database</p>
+            </div>
+            <div class="text-xs font-medium text-slate-500">
+              Total Active: <span id="farmer-listing-count" class="font-bold text-emerald-700">0</span>
+            </div>
+          </div>
+
+          <!-- Active Listings Container -->
+          <div id="farmer-listings-container" class="space-y-3 min-h-[300px]">
+            <!-- Dynamic Content Injected Here -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 2: BUYER MARKETPLACE -->
+    <section id="view-buyer" class="tab-view space-y-6 hidden">
+      
+      <!-- Marketplace Header & Filter Bar -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="border-b border-slate-100 pb-4">
+          <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <i data-lucide="store" class="w-6 h-6 text-emerald-600"></i>
+            Direct Farm Marketplace
+          </h1>
+          <p class="text-xs text-slate-500">Buy directly from local farmers with verified mandi benchmark rates</p>
+        </div>
+
+        <!-- Search & Category Filters -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2 relative">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3.5"></i>
+            <input type="text" id="buyer-search" oninput="app.renderBuyerListings()" placeholder="Search produce, farmer or location..." class="w-full text-sm pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+          </div>
+          <div>
+            <select id="buyer-category-filter" onchange="app.renderBuyerListings()" class="w-full text-sm py-2.5 px-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white">
+              <option value="ALL">All Categories</option>
+              <option value="Vegetables">Vegetables</option>
+              <option value="Fruits">Fruits</option>
+              <option value="Leafy Greens & Spices">Leafy Greens & Spices</option>
+              <option value="Tubers">Tubers & Roots</option>
+              <option value="Grains">Grains & Pulses</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Marketplace Cards Grid -->
+      <div id="buyer-listings-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Dynamic Marketplace Items Injected Here -->
+      </div>
+    </section>
+
+    <!-- TAB 3: CURRENT MARKET PRICES / MANDI SETTINGS -->
+    <section id="view-mandi" class="tab-view space-y-6 hidden">
+      
+      <div class="bg-gradient-to-r from-emerald-900 to-slate-900 text-white p-6 rounded-2xl shadow-md">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <span class="inline-block bg-emerald-700/80 text-emerald-200 text-xs font-semibold px-2.5 py-1 rounded-md mb-2">Market Intelligence</span>
+            <h1 class="text-2xl font-bold">Current Market Prices (Mandi Rates)</h1>
+            <p class="text-xs text-emerald-200 mt-1 max-w-xl">
+              Official Indian government benchmark mandi rates (per kg) across regions with English, Hindi, and Telugu names.
+            </p>
+          </div>
+          <button onclick="app.openMandiAddModal()" class="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold px-4 py-2.5 rounded-xl text-sm transition shadow flex items-center gap-2 self-start md:self-auto">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Add Benchmark Commodity
+          </button>
+        </div>
+      </div>
+
+      <!-- Mandi Filter Bar -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <i data-lucide="filter" class="w-4 h-4 text-slate-400"></i>
+          <span class="text-xs font-semibold uppercase text-slate-500">Filters:</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full sm:w-auto">
+          <select id="mandi-category-filter" onchange="app.renderMandiRates()" class="text-xs py-2 px-3 rounded-lg border border-slate-300 outline-none bg-white">
+            <option value="ALL">All Categories</option>
+            <option value="Vegetables">Vegetables</option>
+            <option value="Fruits">Fruits</option>
+            <option value="Leafy Greens & Spices">Leafy Greens & Spices</option>
+            <option value="Tubers">Tubers & Roots</option>
+            <option value="Grains">Grains & Pulses</option>
+          </select>
+
+          <select id="mandi-region-filter" onchange="app.renderMandiRates()" class="text-xs py-2 px-3 rounded-lg border border-slate-300 outline-none bg-white">
+            <option value="ALL">All Regions</option>
+            <option value="North">North Region</option>
+            <option value="South">South Region</option>
+            <option value="West">West Region</option>
+            <option value="East">East Region</option>
+            <option value="Central">Central Region</option>
+          </select>
+
+          <input type="text" id="mandi-search" oninput="app.renderMandiRates()" placeholder="Search produce (English, Hindi, Telugu)..." class="text-xs py-2 px-3 rounded-lg border border-slate-300 outline-none">
+        </div>
+      </div>
+
+      <!-- Mandi Rates Table -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-700">
+            <thead class="bg-slate-50 border-b border-slate-200 text-xs uppercase font-semibold text-slate-500">
+              <tr>
+                <th class="py-3.5 px-4">Commodity Name</th>
+                <th class="py-3.5 px-4">Regional Names (Hindi / Telugu)</th>
+                <th class="py-3.5 px-4">Category</th>
+                <th class="py-3.5 px-4">Region</th>
+                <th class="py-3.5 px-4">Mandi Rate (₹/kg)</th>
+                <th class="py-3.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="mandi-table-body" class="divide-y divide-slate-100">
+              <!-- Dynamic Mandi Data Rows Injected Here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: SMS SIMULATOR LOG -->
+    <section id="view-sms" class="tab-view space-y-6 hidden">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div>
+            <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <i data-lucide="message-square" class="w-6 h-6 text-emerald-600"></i>
+              Low-Bandwidth SMS Dispatch Simulator
+            </h1>
+            <p class="text-xs text-slate-500">Simulates real-time SMS alerts dispatched to farmers without active internet access.</p>
+          </div>
+          <button onclick="app.clearSmsLogs()" class="text-xs text-rose-600 hover:text-rose-800 font-semibold border border-rose-200 px-3 py-1.5 rounded-lg hover:bg-rose-50 transition">
+            Clear Logs
+          </button>
+        </div>
+
+        <div id="sms-logs-container" class="space-y-3 font-mono text-xs">
+          <!-- Dynamic SMS Logs Injected Here -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- EDIT / ADD MANDI RATE MODAL -->
+  <div id="mandi-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="bg-emerald-900 text-white p-4 flex items-center justify-between">
+        <h3 id="mandi-modal-title" class="font-bold text-sm">Edit Mandi Commodity</h3>
+        <button onclick="app.closeMandiModal()" class="text-emerald-200 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="mandi-modal-form" onsubmit="app.saveMandiRate(event)" class="p-5 space-y-4">
+        <input type="hidden" id="mandi-modal-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Commodity English Name *</label>
+          <input type="text" id="mandi-modal-name" required class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Hindi Name</label>
+            <input type="text" id="mandi-modal-hindi" placeholder="e.g. टमाटर" class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Telugu Name</label>
+            <input type="text" id="mandi-modal-telugu" placeholder="e.g. టమోటా" class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Category *</label>
+            <select id="mandi-modal-category" required class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+              <option value="Vegetables">Vegetables</option>
+              <option value="Fruits">Fruits</option>
+              <option value="Leafy Greens & Spices">Leafy Greens & Spices</option>
+              <option value="Tubers">Tubers & Roots</option>
+              <option value="Grains">Grains & Pulses</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Region *</label>
+            <select id="mandi-modal-region" required class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+              <option value="North">North</option>
+              <option value="South">South</option>
+              <option value="West">West</option>
+              <option value="East">East</option>
+              <option value="Central">Central</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Official Mandi Rate (₹ / kg) *</label>
+          <input type="number" id="mandi-modal-rate" step="0.5" min="1" required class="w-full text-sm p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="app.closeMandiModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+          <button type="submit" class="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow">Save Mandi Benchmark</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CART & PURCHASE ORDER MODAL -->
+  <div id="cart-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="bg-emerald-900 text-white p-4 flex items-center justify-between">
+        <h3 class="font-bold text-sm flex items-center gap-2">
+          <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+          Direct Purchase Order Summary
+        </h3>
+        <button onclick="app.closeCartModal()" class="text-emerald-200 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="cart-items-container" class="p-5 overflow-y-auto space-y-3 flex-1">
+        <!-- Dynamic Cart Items -->
+      </div>
+
+      <div class="p-5 border-t border-slate-100 bg-slate-50 space-y-3">
+        <div class="space-y-1 text-xs text-slate-600">
+          <div class="flex justify-between">
+            <span>Subtotal:</span>
+            <span id="cart-subtotal" class="font-bold text-slate-800">₹0.00</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Direct Logistics & Platform Fee (2%):</span>
+            <span id="cart-fee" class="font-bold text-slate-800">₹0.00</span>
+          </div>
+          <div class="flex justify-between text-sm font-bold text-emerald-800 border-t border-slate-200 pt-2">
+            <span>Total Payable:</span>
+            <span id="cart-total">₹0.00</span>
+          </div>
+        </div>
+
+        <button onclick="app.checkoutOrder()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow transition text-xs uppercase tracking-wider flex items-center justify-center gap-2">
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
+          Confirm & Send Order SMS
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Logic Core with Database Integration -->
+  <script>
+    const SEED_PRODUCE_DATABASE = [
+      { id: 'm1', name: 'Tomato (Truss)', hindiName: 'टमाटर', teluguName: 'టమోటా', category: 'Vegetables', region: 'South', rate: 28 },
+      { id: 'm2', name: 'Onion (Red)', hindiName: 'प्याज़', teluguName: 'ఉల్లిపాయ', category: 'Vegetables', region: 'West', rate: 24 },
+      { id: 'm3', name: 'Potato (Jyoti)', hindiName: 'आलू', teluguName: 'బంగాళాదుంప', category: 'Tubers', region: 'North', rate: 18 },
+      { id: 'm4', name: 'Green Chillies', hindiName: 'हरी मिर्च', teluguName: 'పచ్చి మిర్చి', category: 'Leafy Greens & Spices', region: 'South', rate: 45 },
+      { id: 'm5', name: 'Ginger', hindiName: 'अदरक', teluguName: 'అల్లం', category: 'Leafy Greens & Spices', region: 'Central', rate: 85 },
+      { id: 'm6', name: 'Garlic', hindiName: 'लहसुन', teluguName: 'వెల్లుల్లి', category: 'Leafy Greens & Spices', region: 'North', rate: 120 },
+      { id: 'm7', name: 'Cauliflower', hindiName: 'फूलगोभी', teluguName: 'కాలీఫ్లవర్', category: 'Vegetables', region: 'North', rate: 30 },
+      { id: 'm8', name: 'Cabbage', hindiName: 'पत्तागोभी', teluguName: 'క్యాబేజీ', category: 'Vegetables', region: 'East', rate: 20 },
+      { id: 'm9', name: 'Brinjal (Eggplant)', hindiName: 'बैंगन', teluguName: 'వంకాయ', category: 'Vegetables', region: 'South', rate: 32 },
+      { id: 'm10', name: 'Lady Finger (Okra)', hindiName: 'भिंडी', teluguName: 'బెండకాయ', category: 'Vegetables', region: 'Central', rate: 38 },
+      { id: 'm11', name: 'Carrot', hindiName: 'गाजर', teluguName: 'క్యారట్', category: 'Tubers', region: 'North', rate: 35 },
+      { id: 'm12', name: 'Beetroot', hindiName: 'चुकंदर', teluguName: 'బీట్‌రూట్', category: 'Tubers', region: 'South', rate: 30 },
+      { id: 'm13', name: 'Cucumber', hindiName: 'खीरा', teluguName: 'దోసకాయ', category: 'Vegetables', region: 'West', rate: 22 },
+      { id: 'm14', name: 'Spinach (Palak)', hindiName: 'पालक', teluguName: 'పాలకూర', category: 'Leafy Greens & Spices', region: 'North', rate: 25 },
+      { id: 'm15', name: 'Coriander Leaves', hindiName: 'धनिया', teluguName: 'కొత్తిమీర', category: 'Leafy Greens & Spices', region: 'South', rate: 40 },
+      { id: 'm16', name: 'Fenugreek (Methi)', hindiName: 'मेथी', teluguName: 'మెంతికూర', category: 'Leafy Greens & Spices', region: 'West', rate: 30 },
+      { id: 'm17', name: 'Bottle Gourd (Lauki)', hindiName: 'लौकी', teluguName: 'సొరకాయ', category: 'Vegetables', region: 'North', rate: 20 },
+      { id: 'm18', name: 'Bitter Gourd (Karela)', hindiName: 'करेला', teluguName: 'కాకరకాయ', category: 'Vegetables', region: 'South', rate: 42 },
+      { id: 'm19', name: 'Ridge Gourd (Turai)', hindiName: 'तुरई', teluguName: 'బీరకాయ', category: 'Vegetables', region: 'Central', rate: 36 },
+      { id: 'm20', name: 'Pumpkin', hindiName: 'कद्दू', teluguName: 'గుమ్మడికాయ', category: 'Vegetables', region: 'East', rate: 18 },
+      { id: 'm21', name: 'Banana (Raw)', hindiName: 'कच्चा केला', teluguName: 'పచ్చి అరటి', category: 'Vegetables', region: 'South', rate: 25 },
+      { id: 'm22', name: 'Banana (Ripe)', hindiName: 'केला', teluguName: 'అరటిపండు', category: 'Fruits', region: 'South', rate: 35 },
+      { id: 'm23', name: 'Apple (Shimla)', hindiName: 'सेब', teluguName: 'యాపిల్', category: 'Fruits', region: 'North', rate: 110 },
+      { id: 'm24', name: 'Mango (Alphonso)', hindiName: 'आम', teluguName: 'మామిడి', category: 'Fruits', region: 'West', rate: 140 },
+      { id: 'm25', name: 'Guava', hindiName: 'अमरूद', teluguName: 'జామపండు', category: 'Fruits', region: 'Central', rate: 40 },
+      { id: 'm26', name: 'Papaya', hindiName: 'पपीता', teluguName: 'బొప్పాయి', category: 'Fruits', region: 'South', rate: 28 },
+      { id: 'm27', name: 'Pomegranate', hindiName: 'अनार', teluguName: 'దానిమ్మ', category: 'Fruits', region: 'West', rate: 130 },
+      { id: 'm28', name: 'Watermelon', hindiName: 'तरबूज', teluguName: 'పుచ్చకాయ', category: 'Fruits', region: 'South', rate: 16 },
+      { id: 'm29', name: 'Muskmelon', hindiName: 'खरबूजा', teluguName: 'కర్బూజ', category: 'Fruits', region: 'North', rate: 25 },
+      { id: 'm30', name: 'Sweet Lime (Mosambi)', hindiName: 'मोसमी', teluguName: 'బత్తాయి', category: 'Fruits', region: 'Central', rate: 45 },
+      { id: 'm31', name: 'Orange', hindiName: 'संतरा', teluguName: 'కమలాఫలం', category: 'Fruits', region: 'Central', rate: 50 },
+      { id: 'm32', name: 'Grapes (Green)', hindiName: 'अंगूर', teluguName: 'ద్రాక్ష', category: 'Fruits', region: 'West', rate: 65 },
+      { id: 'm33', name: 'Sweet Potato', hindiName: 'शकरकंद', teluguName: 'చిలగడదుంప', category: 'Tubers', region: 'East', rate: 28 },
+      { id: 'm34', name: 'Tapioca (Cassava)', hindiName: 'सकपुई / टैपिओका', teluguName: 'కర్రపెండలం', category: 'Tubers', region: 'South', rate: 22 },
+      { id: 'm35', name: 'Elephant Foot Yam', hindiName: 'जिमीकंद', teluguName: 'కందగడ్డ', category: 'Tubers', region: 'South', rate: 34 },
+      { id: 'm36', name: 'Drumstick (Moringa)', hindiName: 'सहजन', teluguName: 'మునగకాయ', category: 'Vegetables', region: 'South', rate: 55 },
+      { id: 'm37', name: 'Capsicum (Green)', hindiName: 'शिमला मिर्च', teluguName: 'బెంగళూరు మిర్చి', category: 'Vegetables', region: 'North', rate: 48 },
+      { id: 'm38', name: 'Green Peas', hindiName: 'मटर', teluguName: 'బటాణీలు', category: 'Vegetables', region: 'North', rate: 60 },
+      { id: 'm39', name: 'Cluster Beans (Gwar)', hindiName: 'ग्वार फली', teluguName: 'గోరుచిక్కుడు', category: 'Vegetables', region: 'West', rate: 40 }
+    ];
+
+    // Main App Controller with PostgreSQL backend syncing
+    class AgriDirectApp {
+      constructor() {
+        this.activeTab = 'farmer';
+        this.listings = [];
+        this.mandiDatabase = [...SEED_PRODUCE_DATABASE];
+        this.cart = [];
+        this.smsLogs = [];
+        this.isOnline = true;
+      }
+
+      async init() {
+        this.populateCropDropdown();
+        await this.fetchDataFromBackend();
+        this.switchTab('farmer');
+        lucide.createIcons();
+      }
+
+      async fetchDataFromBackend() {
+        try {
+          // Fetch crop listings from PostgreSQL backend
+          const resListings = await fetch('/api/listings');
+          if (resListings.ok) {
+            const dbListings = await resListings.json();
+            if (dbListings.length > 0) {
+              this.listings = dbListings.map(item => ({
+                id: item.id,
+                cropName: item.crop_name,
+                category: item.category,
+                quantity: item.quantity_kg,
+                price: item.price_per_kg,
+                harvestDate: item.harvest_date ? item.harvest_date.split('T')[0] : '',
+                farmer: item.farmer_name || 'Verified Farmer',
+                location: item.location_district,
+                phone: item.phone_number || '+91 9876543210',
+                status: item.status
+              }));
+            }
+          }
+        } catch (e) {
+          console.log("Backend offline. Using local storage/default mock data.");
+        }
+        this.renderFarmerListings();
+        this.renderBuyerListings();
+        this.renderMandiRates();
+      }
+
+      switchTab(tabId) {
+        this.activeTab = tabId;
+        document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
+        document.getElementById(`view-${tabId}`).classList.remove('hidden');
+        
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.classList.remove('bg-emerald-800', 'text-white');
+          btn.classList.add('text-emerald-100', 'hover:bg-emerald-800');
+        });
+        const activeBtn = document.getElementById(`tab-${tabId}`);
+        if (activeBtn) {
+          activeBtn.classList.add('bg-emerald-800', 'text-white');
+          activeBtn.classList.remove('text-emerald-100', 'hover:bg-emerald-800');
+        }
+        lucide.createIcons();
+      }
+
+      populateCropDropdown() {
+        const select = document.getElementById('crop-name');
+        select.innerHTML = '<option value="">-- Select Vegetable, Fruit, or Grain --</option>';
+        this.mandiDatabase.forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item.name;
+          opt.textContent = `${item.name} (${item.hindiName} / ${item.teluguName})`;
+          select.appendChild(opt);
+        });
+      }
+
+      handleCropSelect(cropName) {
+        const found = this.mandiDatabase.find(i => i.name === cropName);
+        if (found) {
+          document.getElementById('crop-category').value = found.category;
+          document.getElementById('crop-price').value = found.rate;
+        }
+      }
+
+      async handleCreateListing(event) {
+        event.preventDefault();
+        const newListing = {
+          farmer_id: "00000000-0000-0000-0000-000000000001", // Default system user ID
+          crop_name: document.getElementById('crop-name').value,
+          category: document.getElementById('crop-category').value,
+          quantity_kg: parseFloat(document.getElementById('crop-qty').value),
+          price_per_kg: parseFloat(document.getElementById('crop-price').value),
+          harvest_date: document.getElementById('crop-harvest').value,
+          location_district: document.getElementById('crop-location').value,
+          farmer_name: document.getElementById('crop-farmer').value,
+          phone_number: document.getElementById('crop-phone').value,
+          status: 'available'
+        };
+
+        try {
+          const res = await fetch('/api/listings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newListing)
+          });
+          if (res.ok) {
+            await this.fetchDataFromBackend();
+            this.showToast('Success', 'Crop listing saved to PostgreSQL database!', 'success');
+            document.getElementById('add-crop-form').reset();
+            return;
+          }
+        } catch (e) {
+          console.log("Backend offline, saving locally.");
+        }
+
+        // Fallback local add
+        this.listings.unshift({
+          id: 'local_' + Date.now(),
+          cropName: newListing.crop_name,
+          category: newListing.category,
+          quantity: newListing.quantity_kg,
+          price: newListing.price_per_kg,
+          harvestDate: newListing.harvest_date,
+          farmer: newListing.farmer_name,
+          location: newListing.location_district,
+          phone: newListing.phone_number,
+          status: 'available'
+        });
+        this.renderFarmerListings();
+        this.renderBuyerListings();
+        this.showToast('Saved Locally', 'Listing added to local view.', 'success');
+        document.getElementById('add-crop-form').reset();
+      }
+
+      renderFarmerListings() {
+        const container = document.getElementById('farmer-listings-container');
+        document.getElementById('farmer-listing-count').textContent = this.listings.length;
+        if (this.listings.length === 0) {
+          container.innerHTML = `<div class="text-center py-12 text-slate-400 text-xs">No active crop listings yet. Use the form to post your harvest.</div>`;
+          return;
+        }
+        container.innerHTML = this.listings.map(item => `
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-slate-800">${item.cropName}</span>
+                <span class="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">${item.category}</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">Quantity: <strong class="text-slate-700">${item.quantity} kg</strong> | Price: <strong class="text-emerald-700">₹${item.price}/kg</strong></p>
+              <p class="text-[11px] text-slate-400 mt-1">Farmer: ${item.farmer} • Location: ${item.location} • Harvest: ${item.harvestDate}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Available</span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      renderBuyerListings() {
+        const grid = document.getElementById('buyer-listings-grid');
+        const search = (document.getElementById('buyer-search').value || '').toLowerCase();
+        const cat = document.getElementById('buyer-category-filter').value;
+
+        const filtered = this.listings.filter(item => {
+          const matchCat = cat === 'ALL' || item.category === cat;
+          const matchSearch = item.cropName.toLowerCase().includes(search) || item.farmer.toLowerCase().includes(search) || item.location.toLowerCase().includes(search);
+          return matchCat && matchSearch;
+        });
+
+        if (filtered.length === 0) {
+          grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 text-sm">No farm listings match your search criteria.</div>`;
+          return;
+        }
+
+        grid.innerHTML = filtered.map(item => `
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between space-y-4 hover:border-emerald-500 transition">
+            <div>
+              <div class="flex items-start justify-between">
+                <span class="text-xs font-semibold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md">${item.category}</span>
+                <span class="text-sm font-bold text-emerald-800">₹${item.price} <span class="text-[10px] font-normal text-slate-500">/ kg</span></span>
+              </div>
+              <h3 class="font-bold text-slate-800 text-lg mt-2">${item.cropName}</h3>
+              <p class="text-xs text-slate-500 mt-1">📍 ${item.location} • 🌾 ${item.farmer}</p>
+              <div class="mt-3 bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-600">Available Quantity:</span>
+                <strong class="text-slate-800">${item.quantity} kg</strong>
+              </div>
+            </div>
+            <button onclick="app.addToCart('${item.id}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-xl transition text-xs flex items-center justify-center gap-2 shadow">
+              <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+              Add to Order Cart
+            </button>
+          </div>
+        `).join('');
+        lucide.createIcons();
+      }
+
+      renderMandiRates() {
+        const tbody = document.getElementById('mandi-table-body');
+        const cat = document.getElementById('mandi-category-filter').value;
+        const reg = document.getElementById('mandi-region-filter').value;
+        const search = (document.getElementById('mandi-search').value || '').toLowerCase();
+
+        const filtered = this.mandiDatabase.filter(item => {
+          const matchCat = cat === 'ALL' || item.category === cat;
+          const matchReg = reg === 'ALL' || item.region === reg;
+          const matchSearch = item.name.toLowerCase().includes(search) || (item.hindiName && item.hindiName.includes(search)) || (item.teluguName && item.teluguName.includes(search));
+          return matchCat && matchReg && matchSearch;
+        });
+
+        tbody.innerHTML = filtered.map(item => `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="py-3 px-4 font-medium text-slate-800">${item.name}</td>
+            <td class="py-3 px-4 text-slate-600">${item.hindiName || '—'} / ${item.teluguName || '—'}</td>
+            <td class="py-3 px-4"><span class="text-[11px] bg-slate-100 px-2 py-0.5 rounded text-slate-600">${item.category}</span></td>
+            <td class="py-3 px-4 text-slate-600">${item.region}</td>
+            <td class="py-3 px-4 font-bold text-emerald-700">₹${item.rate}</td>
+            <td class="py-3 px-4 text-right">
+              <button onclick="app.editMandiRate('${item.id}')" class="text-xs text-emerald-600 hover:text-emerald-800 font-semibold p-1">Edit</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      addToCart(id) {
+        const item = this.listings.find(l => l.id === id);
+        if (!item) return;
+        const existing = this.cart.find(c => c.id === id);
+        if (existing) {
+          existing.qty += 10;
+        } else {
+          this.cart.push({ ...item, qty: Math.min(50, item.quantity) });
+        }
+        document.getElementById('cart-count').textContent = this.cart.reduce((sum, i) => sum + i.qty, 0);
+        this.showToast('Cart Updated', `${item.cropName} added to cart.`, 'success');
+      }
+
+      openCartModal() {
+        const container = document.getElementById('cart-items-container');
+        if (this.cart.length === 0) {
+          container.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs">Your cart is currently empty.</div>`;
+          document.getElementById('cart-subtotal').textContent = '₹0.00';
+          document.getElementById('cart-fee').textContent = '₹0.00';
+          document.getElementById('cart-total').textContent = '₹0.00';
+          document.getElementById('cart-modal').classList.remove('hidden');
+          return;
+        }
+
+        container.innerHTML = this.cart.map((item, idx) => `
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+            <div>
+              <span class="font-bold text-slate-800 block">${item.cropName}</span>
+              <span class="text-slate-500">₹${item.price} / kg • ${item.location}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="number" min="1" max="${item.quantity}" value="${item.qty}" onchange="app.updateCartQty(${idx}, this.value)" class="w-16 p-1 text-center border rounded font-bold">
+              <span class="font-bold text-emerald-700">₹${item.price * item.qty}</span>
+              <button onclick="app.removeFromCart(${idx})" class="text-rose-500 hover:text-rose-700 ml-2">×</button>
+            </div>
+          </div>
+        `).join('');
+
+        const subtotal = this.cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+        const fee = subtotal * 0.02;
+        const total = subtotal + fee;
+
+        document.getElementById('cart-subtotal').textContent = `₹${subtotal.toFixed(2)}`;
+        document.getElementById('cart-fee').textContent = `₹${fee.toFixed(2)}`;
+        document.getElementById('cart-total').textContent = `₹${total.toFixed(2)}`;
+        document.getElementById('cart-modal').classList.remove('hidden');
+      }
+
+      updateCartQty(idx, val) {
+        this.cart[idx].qty = parseInt(val) || 1;
+        this.openCartModal();
+      }
+
+      removeFromCart(idx) {
+        this.cart.splice(idx, 1);
+        document.getElementById('cart-count').textContent = this.cart.reduce((sum, i) => sum + i.qty, 0);
+        this.openCartModal();
+      }
+
+      closeCartModal() {
+        document.getElementById('cart-modal').classList.add('hidden');
+      }
+
+      checkoutOrder() {
+        if (this.cart.length === 0) return;
+        this.smsLogs.unshift({
+          time: new Date().toLocaleTimeString(),
+          text: `[SMS Dispatch] Order confirmed for ${this.cart.length} items. Total: ₹${document.getElementById('cart-total').textContent}. Dispatched to farmers via SMS Gateway.`
+        });
+        document.getElementById('sms-unread-dot').classList.remove('hidden');
+        this.cart = [];
+        document.getElementById('cart-count').textContent = '0';
+        this.closeCartModal();
+        this.showToast('Order Confirmed', 'SMS order notifications dispatched successfully!', 'success');
+        this.renderSmsLogs();
+      }
+
+      renderSmsLogs() {
+        const container = document.getElementById('sms-logs-container');
+        if (this.smsLogs.length === 0) {
+          container.innerHTML = `<div class="text-slate-400">No SMS logs recorded yet. Place an order to simulate SMS dispatch.</div>`;
+          return;
+        }
+        container.innerHTML = this.smsLogs.map(log => `
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+            <span class="text-emerald-700 font-bold">[${log.time}]</span> ${log.text}
+          </div>
+        `).join('');
+      }
+
+      clearSmsLogs() {
+        this.smsLogs = [];
+        this.renderSmsLogs();
+      }
+
+      openMandiAddModal() {
+        document.getElementById('mandi-modal-title').textContent = 'Add Benchmark Commodity';
+        document.getElementById('mandi-modal-form').reset();
+        document.getElementById('mandi-modal-id').value = '';
+        document.getElementById('mandi-modal').classList.remove('hidden');
+      }
+
+      editMandiRate(id) {
+        const item = this.mandiDatabase.find(i => i.id === id);
+        if (!item) return;
+        document.getElementById('mandi-modal-title').textContent = 'Edit Mandi Commodity';
+        document.getElementById('mandi-modal-id').value = item.id;
+        document.getElementById('mandi-modal-name').value = item.name;
+        document.getElementById('mandi-modal-hindi').value = item.hindiName || '';
+        document.getElementById('mandi-modal-telugu').value = item.teluguName || '';
+        document.getElementById('mandi-modal-category').value = item.category;
+        document.getElementById('mandi-modal-region').value = item.region;
+        document.getElementById('mandi-modal-rate').value = item.rate;
+        document.getElementById('mandi-modal').classList.remove('hidden');
+      }
+
+      saveMandiRate(e) {
+        e.preventDefault();
+        const id = document.getElementById('mandi-modal-id').value;
+        const name = document.getElementById('mandi-modal-name').value;
+        const hindiName = document.getElementById('mandi-modal-hindi').value;
+        const teluguName = document.getElementById('mandi-modal-telugu').value;
+        const category = document.getElementById('mandi-modal-category').value;
+        const region = document.getElementById('mandi-modal-region').value;
+        const rate = parseFloat(document.getElementById('mandi-modal-rate').value);
+
+        if (id) {
+          const item = this.mandiDatabase.find(i => i.id === id);
+          if (item) {
+            item.name = name;
+            item.hindiName = hindiName;
+            item.teluguName = teluguName;
+            item.category = category;
+            item.region = region;
+            item.rate = rate;
+          }
+        } else {
+          this.mandiDatabase.unshift({
+            id: 'm_' + Date.now(),
+            name, hindiName, teluguName, category, region, rate
+          });
+          this.populateCropDropdown();
+        }
+        this.closeMandiModal();
+        this.renderMandiRates();
+        this.showToast('Saved', 'Mandi benchmark updated successfully.', 'success');
+      }
+
+      closeMandiModal() {
+        document.getElementById('mandi-modal').classList.add('hidden');
+      }
+
+      toggleOfflineMode() {
+        this.isOnline = !this.isOnline;
+        const banner = document.getElementById('offline-banner');
+        const icon = document.getElementById('network-icon');
+        const text = document.getElementById('network-text');
+        const btn = document.getElementById('toggle-offline-btn');
+
+        if (!this.isOnline) {
+          banner.classList.remove('hidden');
+          icon.setAttribute('data-lucide', 'wifi-off');
+          text.textContent = 'Offline';
+          btn.classList.add('bg-amber-800');
+        } else {
+          banner.classList.add('hidden');
+          icon.setAttribute('data-lucide', 'wifi');
+          text.textContent = 'Online';
+          btn.classList.remove('bg-amber-800');
+        }
+        lucide.createIcons();
+      }
+
+      showToast(title, msg, type = 'success') {
+        const toast = document.getElementById('toast');
+        document.getElementById('toast-title').textContent = title;
+        document.getElementById('toast-msg').textContent = msg;
+        toast.classList.remove('translate-y-20', 'opacity-0');
+        setTimeout(() => {
+          toast.classList.add('translate-y-20', 'opacity-0');
+        }, 3500);
+      }
+    }
+
+    const app = new AgriDirectApp();
+    window.addEventListener('DOMContentLoaded', () => app.init());
+  </script>
+</body>
+</html>
